@@ -1,0 +1,150 @@
+{# templates/blog/detail.html.twig #}
+
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ post.titre }}{% endblock %}
+
+{% block body %}
+<canvas id="gradient-canvas" style="width:100vw;height:100vh; opacity: 1; position: fixed; top: 0; left: 0; z-index: 0;"></canvas>
+<script src="https://unpkg.com/detect-gpu@latest/dist/detect-gpu.umd.js"></script>
+<script src="{{ asset('js/Gradient.js') }}"></script>
+<script>
+    async function detectGPU() {
+        const gpuTier = await DetectGPU.getGPUTier()
+        const hasGPUAcceleration = gpuTier.tier >= 2
+        console.log("GPU Acceleration: " + hasGPUAcceleration);
+        console.log("GPU Tier: " + gpuTier.tier);
+        await processGPUResults(hasGPUAcceleration, gpuTier.tier)
+    }
+
+    async function processGPUResults(hasGPUAcceleration, gpuTier) {
+        let gradientCanvas = document.getElementById('gradient-canvas')
+
+        if (gpuTier === 0) {
+            gradientCanvas.style.background = 'linear-gradient(318deg, rgba(96,146,236,1) 0%, rgba(56,103,156,1) 25%, rgba(36,36,56,1) 54%)';
+        } else {
+            new Gradient({
+                canvas: '#gradient-canvas',
+                colors: ['#1e202d', '#303f60', '#1e202d', '#1e202d'],
+                static: gpuTier < 3,
+            });
+        }
+
+
+        gradientCanvas.style.opacity = "1";
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (hasGPUAcceleration) {
+            let shouldBlurElements = document.getElementsByClassName("element-item-container");
+            for (let i = 0; i < shouldBlurElements.length; i++) {
+                shouldBlurElements[i].style.backdropFilter = "blur(10px)";
+            }
+
+            let navbar = document.getElementById("taunahi-nav");
+            if (navbar) {
+                navbar.style.backdropFilter = "blur(10px)";
+            }
+        }
+
+        for (const funcName of Object.getOwnPropertyNames(this)) {
+            if (typeof this[funcName] === 'function' && funcName.startsWith("afterGpuCheck")) {
+                const fn = window[funcName];
+                fn(hasGPUAcceleration);
+            }
+        }
+    }
+
+    
+    
+        detectGPU();
+    
+</script>
+<div class="container-article" style="margin-top: 120px; position: relative; z-index: 2;">
+    <article>
+        <h1>{{ post.titre }}</h1>
+        <h2>écrit par : {{ post.auteur }}</h2>
+        <p>{{ post.contenu }}</p>
+        <p>Publié {{ post.dateDePublication|ago }}</p>
+
+        {% if app.user.userIdentifier == 'admin@symfony.com' %}
+            <a href="{{ path('modifier_article', {'id': post.id}) }}">Modifier</a>
+            <a href="{{ path('supprimer_article', {'id': post.id}) }}">Supprimer</a>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}
+
+{% block stylesheets %}
+<style>
+    *,
+    *:before,
+    *:after {
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+    }
+    body {
+        background-color: #080710;
+        font-family: 'Poppins', sans-serif;
+        color: #ffffff;
+        letter-spacing: 0.5px;
+    }
+    .background {
+        width: 430px;
+        height: 520px;
+        position: absolute;
+        transform: translate(-50%, -50%);
+        left: 50%;
+        top: 50%;
+    }
+    .background .shape {
+        height: 200px;
+        width: 200px;
+        position: absolute;
+        border-radius: 50%;
+    }
+    .shape:first-child {
+        background: linear-gradient(
+            #1845ad,
+            #23a2f6
+        );
+        left: -400px;
+        top: -80px;
+    }
+    .shape:last-child {
+        background: linear-gradient(
+            to right,
+            #ff512f,
+            #f09819
+        );
+        right: -400px;
+        bottom: -80px;
+    }
+    .container-article {
+        width: 60%;
+        margin-left: 20%;
+        padding: 20px;
+        background-color: rgba(255,255,255,0.13);
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255,255,255,0.1);
+        box-shadow: 0 0 40px rgba(8,7,16,0.6);
+    }
+    article h1, article h2, article p {
+        margin-bottom: 20px;
+    }
+    article h1 {
+        font-size: 32px;
+        font-weight: 600;
+    }
+    article h2 {
+        font-size: 24px;
+        font-weight: 500;
+    }
+    article p {
+        font-size: 18px;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
